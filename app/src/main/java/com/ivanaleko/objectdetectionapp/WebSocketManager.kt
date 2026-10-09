@@ -45,6 +45,9 @@ class WebSocketManager(
     private val frameSentTime =
         AtomicLong(0L)
 
+    private val connectionGeneration =
+        AtomicLong(0L)
+
     private val mainHandler =
         Handler(
             Looper.getMainLooper()
@@ -77,10 +80,26 @@ class WebSocketManager(
 
                 frameSentTime.set(0L)
 
+                val oldWebSocket =
+                    webSocket
+
+                connectionGeneration.incrementAndGet()
+
+                isConnected.set(false)
+
                 Log.e(
                     "WebSocket",
-                    "Odgovor servera nije stigao unutar 5 sekundi"
+                    "Odgovor servera nije stigao unutar 5 sekundi. Stara veza se zatvara."
                 )
+
+                oldWebSocket?.close(
+                    1000,
+                    "Timeout odgovora"
+                )
+
+                webSocket = null
+
+                scheduleReconnect()
             }
         }
 
@@ -100,6 +119,9 @@ class WebSocketManager(
 
         reconnectScheduled.set(false)
 
+        val generation =
+            connectionGeneration.incrementAndGet()
+
         Log.d(
             "WebSocket",
             "Pokušaj povezivanja sa serverom..."
@@ -113,20 +135,47 @@ class WebSocketManager(
         webSocket =
             client.newWebSocket(
                 request,
-                createWebSocketListener()
+                createWebSocketListener(
+                    generation
+                )
             )
     }
 
-    private fun createWebSocketListener():
-            WebSocketListener {
+    private fun createWebSocketListener(
+        generation: Long
+    ): WebSocketListener {
 
         return object :
             WebSocketListener() {
+
+            private fun isCurrentConnection(
+                socket: WebSocket
+            ): Boolean {
+
+                return (
+                        generation ==
+                                connectionGeneration.get() &&
+                                socket === webSocket
+                        )
+            }
 
             override fun onOpen(
                 webSocket: WebSocket,
                 response: Response
             ) {
+
+                if (
+                    generation !=
+                    connectionGeneration.get()
+                ) {
+
+                    webSocket.close(
+                        1000,
+                        "Stara WebSocket veza"
+                    )
+
+                    return
+                }
 
                 mainHandler.removeCallbacks(
                     responseTimeoutRunnable
@@ -150,6 +199,20 @@ class WebSocketManager(
                 webSocket: WebSocket,
                 text: String
             ) {
+
+                if (
+                    !isCurrentConnection(
+                        webSocket
+                    )
+                ) {
+
+                    Log.d(
+                        "WebSocket",
+                        "Ignoriran zakašnjeli odgovor stare WebSocket veze"
+                    )
+
+                    return
+                }
 
                 mainHandler.removeCallbacks(
                     responseTimeoutRunnable
@@ -190,6 +253,20 @@ class WebSocketManager(
                 bytes: ByteString
             ) {
 
+                if (
+                    !isCurrentConnection(
+                        webSocket
+                    )
+                ) {
+
+                    Log.d(
+                        "WebSocket",
+                        "Ignorirani binarni podaci stare WebSocket veze"
+                    )
+
+                    return
+                }
+
                 mainHandler.removeCallbacks(
                     responseTimeoutRunnable
                 )
@@ -211,6 +288,14 @@ class WebSocketManager(
                 response: Response?
             ) {
 
+                if (
+                    generation !=
+                    connectionGeneration.get()
+                ) {
+
+                    return
+                }
+
                 mainHandler.removeCallbacks(
                     responseTimeoutRunnable
                 )
@@ -220,6 +305,15 @@ class WebSocketManager(
                 waitingForResponse.set(false)
 
                 frameSentTime.set(0L)
+
+                if (
+                    this@WebSocketManager.webSocket ===
+                    webSocket
+                ) {
+
+                    this@WebSocketManager.webSocket =
+                        null
+                }
 
                 Log.e(
                     "WebSocket",
@@ -236,6 +330,19 @@ class WebSocketManager(
                 code: Int,
                 reason: String
             ) {
+
+                if (
+                    generation !=
+                    connectionGeneration.get()
+                ) {
+
+                    webSocket.close(
+                        code,
+                        reason
+                    )
+
+                    return
+                }
 
                 mainHandler.removeCallbacks(
                     responseTimeoutRunnable
@@ -265,6 +372,14 @@ class WebSocketManager(
                 reason: String
             ) {
 
+                if (
+                    generation !=
+                    connectionGeneration.get()
+                ) {
+
+                    return
+                }
+
                 mainHandler.removeCallbacks(
                     responseTimeoutRunnable
                 )
@@ -274,6 +389,15 @@ class WebSocketManager(
                 waitingForResponse.set(false)
 
                 frameSentTime.set(0L)
+
+                if (
+                    this@WebSocketManager.webSocket ===
+                    webSocket
+                ) {
+
+                    this@WebSocketManager.webSocket =
+                        null
+                }
 
                 Log.d(
                     "WebSocket",
@@ -410,6 +534,8 @@ class WebSocketManager(
         manualClose.set(true)
 
         reconnectScheduled.set(false)
+
+        connectionGeneration.incrementAndGet()
 
         mainHandler.removeCallbacksAndMessages(
             null
