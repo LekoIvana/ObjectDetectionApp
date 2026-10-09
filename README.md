@@ -233,6 +233,28 @@ Rezultati se spremaju u datoteke:
     quality_results_raw.csv
     quality_summary.csv
 
+### Test prekoračenja vremena čekanja WebSocket odgovora
+
+Za provjeru ponašanja mobilne aplikacije u slučaju zakašnjelog odgovora poslužitelja koristi se pomoćni testni poslužitelj:
+
+    server/timeout_test/main_ws_timeout_test.py
+
+Testni poslužitelj namjerno odgađa slanje odgovora za 6 sekundi, dok mobilna aplikacija čeka odgovor najviše 5 sekundi.
+
+Test provjerava sljedeći scenarij:
+
+1. mobilna aplikacija šalje JPEG okvir poslužitelju
+2. poslužitelj izvršava detekciju, ali namjerno odgađa odgovor
+3. nakon 5 sekundi mobilna aplikacija registrira prekoračenje vremena čekanja
+4. stara WebSocket veza se zatvara
+5. pokreće se ponovno povezivanje
+6. uspostavlja se nova WebSocket veza
+7. zakašnjeli odgovor stare veze ne koristi se u mobilnoj aplikaciji
+
+Test je uspješno proveden. Poslužitelj je u testnom scenariju pokušao poslati odgovor nakon 6 sekundi, nakon što je mobilna aplikacija već zatvorila staru vezu zbog isteka vremena čekanja. Nakon toga mobilna aplikacija uspostavila je novu WebSocket vezu i nastavila s obradom novih okvira.
+
+Testni poslužitelj služi isključivo za provjeru ponašanja pri prekoračenju vremena čekanja i ne koristi se za normalan rad aplikacije.
+
 ## Korištene tehnologije
 
 ### Android
