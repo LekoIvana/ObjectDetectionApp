@@ -11,7 +11,7 @@ Sustav se sastoji od dva glavna dijela:
 - Android mobilne aplikacije
 - poslužiteljskog dijela s FastAPI aplikacijom i YOLOv8n modelom
 
-Android aplikacija nalazi se u ovom repozitoriju, dok se poslužiteljski dio nalazi na udaljenom Linux poslužitelju.
+Android aplikacija nalazi se u mapi `app`, dok se poslužiteljski dio nalazi u mapi `server`.
 
 ## Android aplikacija
 
@@ -43,9 +43,7 @@ Aplikacija obavlja sljedeće korake:
 
 ## Poslužiteljski dio
 
-Poslužiteljski dio nalazi se na udaljenom Linux poslužitelju.
-
-Na poslužitelju se koristi Python virtualno okruženje s potrebnim bibliotekama, a detekcija se izvršava pomoću YOLOv8n modela. U korištenoj konfiguraciji model se izvršava na CPU-u.
+Poslužiteljski dio nalazi se u mapi `server`.
 
 Glavna Python datoteka poslužiteljske strane je:
 
@@ -54,6 +52,8 @@ Glavna Python datoteka poslužiteljske strane je:
 FastAPI aplikacija koristi WebSocket endpoint:
 
     /ws/detect
+
+Na poslužitelju se koristi Python virtualno okruženje s potrebnim bibliotekama, a detekcija se izvršava pomoću YOLOv8n modela. U korištenoj konfiguraciji model se izvršava na CPU-u.
 
 ### Pokretanje poslužitelja
 
@@ -70,6 +70,10 @@ Nakon toga pokrenuti FastAPI aplikaciju:
     uvicorn main_ws_roi_v6:app --host 0.0.0.0 --port 8000
 
 Nakon pokretanja poslužitelj radi na portu `8000`.
+
+Popis potrebnih Python ovisnosti nalazi se u:
+
+    server/requirements.txt
 
 Pristupni podaci za udaljeni poslužitelj nisu dio repozitorija.
 
@@ -159,6 +163,58 @@ Ispitivano je:
 - latencija od slanja slike do primitka rezultata
 - utjecaj broja CPU dretvi na vrijeme izvođenja
 - ponašanje poslužitelja pri istovremenom radu više klijenata
+
+### Benchmark veličine ulazne slike
+
+Skripta `benchmark_imgsz.py` nalazi se u mapi `server`, a slike korištene za test nalaze se u mapi `server/benchmark_images`.
+
+Za pokretanje testa potrebno je prijeći u mapu `server`:
+
+    cd server
+
+i pokrenuti:
+
+    python benchmark_imgsz.py
+
+### Benchmark broja CPU dretvi
+
+Skripta `benchmark_threads.py` nalazi se u mapi `server`.
+
+Iz mape `server` pokreće se naredbom:
+
+    python benchmark_threads.py
+
+### Test opterećenja s više klijenata
+
+Za ispitivanje ponašanja poslužitelja pri istovremenom radu više klijenata koristi se skripta:
+
+    load_test.py
+
+Za test se koristi slika:
+
+    test_frame.jpg
+
+Primjer pokretanja testa s 10 klijenata u trajanju od 120 sekundi:
+
+    python load_test.py --clients 10 --duration 120 --image test_frame.jpg
+
+Broj klijenata i trajanje testa mogu se prilagoditi prema potrebi.
+
+Sažeti rezultati spremaju se u:
+
+    load_test_results.csv
+
+Pojedinačne latencije svih zahtjeva spremaju se u:
+
+    load_test_latencies.csv
+
+### Test kvalitete detekcije
+
+Materijali za ispitivanje kvalitete detekcije nalaze se u mapi:
+
+    server/quality_test
+
+U mapi se nalaze skripte, testne slike, pripadajuće oznake i rezultati mjerenja.
 
 Detaljni postupci ispitivanja i dobiveni rezultati opisani su u diplomskom radu.
 
