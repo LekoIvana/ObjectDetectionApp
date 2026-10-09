@@ -214,9 +214,24 @@ Materijali za ispitivanje kvalitete detekcije nalaze se u mapi:
 
     server/quality_test
 
-U mapi se nalaze skripte, testne slike, pripadajuće oznake i rezultati mjerenja.
+Test koristi slike iz mape `images` i pripadajuće oznake iz mape `labels`.
 
-Detaljni postupci ispitivanja i dobiveni rezultati opisani su u diplomskom radu.
+Za pokretanje testa potrebno je prijeći u mapu `quality_test`:
+
+    cd ~/diplomski-object-detection/quality_test
+
+Aktivirati virtualno Python okruženje:
+
+    source ../venv/bin/activate
+
+Pokrenuti test:
+
+    python quality_test.py
+
+Rezultati se spremaju u datoteke:
+
+    quality_results_raw.csv
+    quality_summary.csv
 
 ## Korištene tehnologije
 
